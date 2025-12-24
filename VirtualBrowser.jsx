@@ -104,12 +104,23 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         if (data.type === 'screenshot') {
+          // Only apply screenshot/title to matching tab
+          if (data.tab_id && data.tab_id !== activeTabId) {
+            // Update background tab metadata only
+            setTabs(prev => prev.map(t =>
+              t.id === data.tab_id
+                ? { ...t, url: data.url || t.url, title: data.title || t.title, isLoading: false }
+                : t
+            ));
+            return;
+          }
+
           setScreenshot(data.data);
           setIsLoading(false);
           
-          // Update tab info
+
           if (data.url && data.title) {
             setTabs(prev => prev.map(t => 
               t.id === activeTabId 
