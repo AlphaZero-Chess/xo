@@ -49,17 +49,32 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
 
   const activeTab = tabs.find(t => t.id === activeTabId);
 
-  // Generate unique tab ID
+// Backend uses UUIDs for tab/session IDs; frontend just displays ids.
   const generateTabId = () => `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Initialize browser session
+// Initialize browser session
   const initSession = useCallback(async () => {
     if (sessionId || sessionInitializing) return;
-    
+
     setSessionInitializing(true);
     try {
       const session = await browserApi.createSession();
+      // Backend now returns initial_tab_id for real multi-tab contexts
       setSessionId(session.session_id);
+      setActiveTabId(session.initial_tab_id || mockTabs[0]?.id);
+      // Ensure local tabs list is aligned with backend
+      if (session.initial_tab_id) {
+        setTabs([
+          {
+            id: session.initial_tab_id,
+            title: 'New Tab',
+            url: 'chrome://newtab',
+            favicon: null,
+            isActive: true,
+            isLoading: false,
+          },
+        ]);
+      }
       console.log('Browser session created:', session.session_id);
     } catch (err) {
       console.error('Failed to create browser session:', err);
