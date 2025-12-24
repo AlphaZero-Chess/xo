@@ -238,7 +238,35 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
   }, [sessionId]);
 
   // Tab management
-  const handleNewTab = useCallback(() => {
+const handleNewTab = useCallback(async () => {
+    // Prefer real backend tab creation
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'new_tab' }));
+      return;
+    }
+
+    if (sessionId) {
+      try {
+        const created = await browserApi.createTab(sessionId);
+        const newId = created.tab_id;
+        const newTab = {
+          id: newId,
+          title: 'New Tab',
+          url: 'chrome://newtab',
+          favicon: null,
+          isActive: true,
+          isLoading: false,
+        };
+        setTabs(prev => [...prev.map(t => ({ ...t, isActive: false })), newTab]);
+        setActiveTabId(newId);
+        setScreenshot(null);
+        setError(null);
+        return;
+      } catch (e) {
+        // fall back to UI-only tab if backend fails
+      }
+    }
+
     const newTab = {
       id: generateTabId(),
       title: 'New Tab',
