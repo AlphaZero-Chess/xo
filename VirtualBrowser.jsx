@@ -84,7 +84,7 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
     }
   }, [sessionId, sessionInitializing]);
 
-  // Connect WebSocket when session is ready
+// Connect WebSocket when session is ready
   useEffect(() => {
     if (!sessionId || wsRef.current) return;
 
@@ -94,6 +94,11 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
     ws.onopen = () => {
       console.log('WebSocket connected');
       setWsConnected(true);
+
+      // Ensure backend active tab matches current activeTabId
+      if (activeTabId) {
+        ws.send(JSON.stringify({ type: 'activate_tab', tabId: activeTabId }));
+      }
     };
 
     ws.onmessage = (event) => {
