@@ -122,11 +122,47 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
           
 
           if (data.url && data.title) {
-            setTabs(prev => prev.map(t => 
-              t.id === activeTabId 
+            setTabs(prev => prev.map(t =>
+              t.id === activeTabId
                 ? { ...t, url: data.url, title: data.title || data.url, isLoading: false }
                 : t
             ));
+          }
+        } else if (data.type === 'state') {
+          if (data.state === 'navigating') {
+            setIsLoading(true);
+          }
+          if (data.state === 'idle') {
+            setIsLoading(false);
+          }
+        } else if (data.type === 'tab_created') {
+          const newId = data.tab_id;
+          if (newId) {
+            setTabs(prev => [
+              ...prev.map(t => ({ ...t, isActive: false })),
+              {
+                id: newId,
+                title: 'New Tab',
+                url: 'chrome://newtab',
+                favicon: null,
+                isActive: true,
+                isLoading: false,
+              },
+            ]);
+            setActiveTabId(newId);
+            setScreenshot(null);
+          }
+        } else if (data.type === 'tab_closed') {
+          // server will send active_tab_id
+          const closedId = data.tab_id;
+          const newActive = data.active_tab_id;
+          setTabs(prev => {
+            const remaining = prev.filter(t => t.id !== closedId);
+            if (remaining.length === 0) return prev;
+            return remaining.map(t => ({ ...t, isActive: t.id === newActive }));
+          });
+          if (newActive) {
+            setActiveTabId(newActive);
           }
         } else if (data.type === 'error') {
           setError(data.message);
@@ -136,7 +172,7 @@ const VirtualBrowser = ({ defaultExpanded = true, onClose }) => {
         console.error('WebSocket message parse error:', err);
       }
     };
-
+    
     ws.onclose = () => {
       console.log('WebSocket disconnected');
       setWsConnected(false);
